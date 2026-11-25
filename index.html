@@ -18,6 +18,15 @@
 .target .action{background:#fff;color:#102d56}
 .answers-label{display:block;margin:0 0 8px;font-size:.9rem;font-weight:800;color:#17334b}
 @media(max-width:400px){.tile{padding:8px}.tile:has(.picture){padding:5px}}
+
+.sequence-model,.sequence-options{flex-wrap:nowrap;gap:6px}
+.target .sequence-model{max-width:100%}
+.sequence-character{width:clamp(44px,14vw,78px);min-width:0;aspect-ratio:1;border-radius:9px;background:#fff}
+.sequence-character .picture{width:100%;height:100%;object-fit:contain}
+.choice.sequence-character{margin:0;padding:3px}
+.sequence-done{outline:3px solid #24955a;outline-offset:-2px}
+.sequence-model .dot{flex:0 1 60px;min-width:0}
+.sequence-options .choice:not(.sequence-character){min-width:0;flex:0 1 80px;margin:0;padding:6px}
 </style></head><body><header><div class="wrap" style="padding:0"><h1>🚀 Misiones de atención de Gian</h1><p>Jugamos, practicamos y celebramos cada intento 💙</p></div></header><main class="wrap"><nav id="nav"><button data-game="buscar">🔎<br>Encontrar</button><button data-game="memoria">🧠<br>Memoria</button><button data-game="secuencia">🎨<br>Secuencias</button><button data-game="semaforo">🚦<br>Semáforo</button><button data-game="blaze">🏎️<br>Blaze</button><button data-game="silabas">🔤<br>Sílabas</button></nav><section class="panel"><div class="settings"><label for="difficulty"><b>Dificultad:</b></label><select id="difficulty"><option value="1">Fácil</option><option value="2">Medio</option><option value="3">Desafío</option></select><button class="action secondary" id="sound" style="margin:0">🔊 Leer consignas</button></div><h2 id="heading"></h2><p id="instruction" class="muted"></p><div id="stage"></div><div id="feedback" class="feedback" aria-live="polite"></div><button id="next" class="action hidden">Otra misión ➜</button><div id="score" class="score"></div></section><section class="panel small"><b>Para acompañar a Gian:</b> una consigna por vez, sin cronómetro y con pausas. Comenzar con 3–5 minutos. Si necesita ayuda, mostrarle cómo hacerlo y volver a intentar. La dificultad es ajustable; no es una evaluación clínica.</section></main><footer>Hecho especialmente para Gian 💙 · Para usarlo en iPhone, publicarlo como página web (GitHub Pages)</footer><script>
 (()=>{'use strict';const $=id=>document.getElementById(id),stage=$('stage'),feedback=$('feedback'),next=$('next');
 const characters = {
@@ -67,7 +76,75 @@ function pictureModel(item) {
 const characterBank = ['chase','blaze','santiago','peppa'];
 const extraCharacters = ['marshall','stripes','george','tomas','lorelai'];
 const pictureBanks = [characterBank, extraCharacters];
-const banks=[characterBank,extraCharacters,['🚗','🚜','🚒','🚙','🚌','🚕','🚲','🚑','🚚'],['🐶','🐱','🐸','🐻','🐰','🐵','🐷','🦊','🐼'],['🍎','🍌','🍐','🍇','🍓','🍊','🍉','🍒','🍍'],['⭐','🌙','☀️','🌈','☁️','🌻','🌸','🍀','⚡']];const colors=['#e94d4d','#2782e5','#f7c638','#3dbb75'];let game='buscar',round=0,locked=false,score=Number(safeGet('gian_score')||0),attempts=Number(safeGet('gian_attempts')||0),sound=false;function safeGet(k){try{return localStorage.getItem(k)}catch(e){return null}}function safeSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}function speak(t){if(!sound||!('speechSynthesis'in window))return; speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang='es-AR';u.rate=.78;speechSynthesis.speak(u)}function el(tag,cl,txt){let x=document.createElement(tag);if(cl)x.className=cl;if(txt!==undefined)x.textContent=txt;return x}function msg(t,ok){feedback.textContent=t;if(ok){score++;safeSet('gian_score',score)}attempts++;safeSet('gian_attempts',attempts);$('score').textContent=`Misiones logradas: ${score} · Intentos: ${attempts}`;speak(t)}function complete(t,ok=true){locked=true;msg(t,ok);next.classList.remove('hidden')}function setup(title,instruction){locked=false;stage.replaceChildren();feedback.textContent='';next.classList.add('hidden');$('heading').textContent=title;$('instruction').textContent=instruction;$('score').textContent=`Misiones logradas: ${score} · Intentos: ${attempts}`;speak(instruction)}function diff(){return Number($('difficulty').value)}function shuffle(a){return [...a].sort(()=>Math.random()-.5)}function buscar(){let n=[4,6,9][diff()-1],bank=banks[round%banks.length],items=pictureBanks.includes(bank)?shuffle([...shuffle(bank).slice(0,n),...shuffle(pictureBanks.find(group=>group!==bank)).slice(0,Math.max(0,n-bank.length))]):shuffle(bank).slice(0,n),target=items[Math.floor(Math.random()*n)];setup('🔎 Encontrar','Buscá y tocá el dibujo que aparece arriba.');stage.append(pictureModel(target));let grid=el('div','grid');items.forEach(item=>{let b=el('button','tile');drawPicture(b,item);b.onclick=()=>{if(locked)return;if(item===target){b.classList.add('good');complete('¡Muy bien, Gian! ¡Lo encontraste!')}else{b.classList.add('bad');feedback.textContent='Probá otra vez. Mirá con calma.';speak('Probá otra vez');setTimeout(()=>b.classList.remove('bad'),650)}};grid.append(b)});stage.append(el('span','answers-label','Elegí la imagen igual'),grid)}function memoria(){let pairs=[2,3,4][diff()-1],items=shuffle(banks[(round-1+banks.length)%banks.length]).slice(0,pairs),cards=shuffle([...items,...items].map((v,i)=>({v,id:i}))),opened=[],found=0;setup('🧠 Memoria','Tocá dos tarjetas para encontrar dibujos iguales.');let grid=el('div','grid');cards.forEach(c=>{let b=el('button','tile','❓');b.setAttribute('aria-label','Tarjeta tapada');b.onclick=()=>{if(locked||b.dataset.found||opened.some(o=>o.b===b)||opened.length===2)return;drawPicture(b,c.v);opened.push({b,v:c.v});if(opened.length===2){let [a,d]=opened;if(a.v===d.v){a.b.classList.add('good');d.b.classList.add('good');a.b.dataset.found=d.b.dataset.found='yes';opened=[];found++;if(found===pairs)complete('¡Excelente! ¡Encontraste todas las parejas!')}else{locked=true;setTimeout(()=>{for(const {b} of [a,d]){b.textContent='❓';b.setAttribute('aria-label','Tarjeta tapada')}opened=[];if(stage.contains(a.b))locked=false},1000)}}};grid.append(b)});stage.append(grid)}function secuencia(){let n=[2,3,4][diff()-1],pattern=Array.from({length:n},()=>Math.floor(Math.random()*[2,3,4][diff()-1])),pos=0;setup('🎨 Secuencias','Mirá los colores de arriba y tocá los mismos en orden.');let model=el('div','sequence');pattern.forEach(i=>{let dot=el('div','dot');dot.style.background=colors[i];model.append(dot)});stage.append(modelCard(model, 'Mirá el orden'));let row=el('div','sequence');for(let i=0;i<[2,3,4][diff()-1];i++){let b=el('button','choice','●');b.style.color=colors[i];b.setAttribute('aria-label','Color '+['rojo','azul','amarillo','verde'][i]);b.onclick=()=>{if(locked)return;if(i===pattern[pos]){pos++;feedback.textContent=`¡Bien! ${pos} de ${n}`;if(pos===n)complete('¡Genial! ¡Completaste la secuencia!')}else{pos=0;feedback.textContent='Probemos de nuevo desde el principio.';speak('Probemos de nuevo')}};row.append(b)}stage.append(row)}function semaforo(){let n=[2,3,4][diff()-1],rules=[{color:'🟢',label:'SEGUIR',act:'Caminar en el lugar'},{color:'🔴',label:'PARAR',act:'Quedarse quieto'},{color:'🟡',label:'DESPACIO',act:'Moverse despacio'},{color:'🔵',label:'APLAUDIR',act:'Aplaudir'}].slice(0,n),r=rules[Math.floor(Math.random()*n)];setup('🚦 Semáforo','Mirá el semáforo. Elegí qué hay que hacer. También podés hacerlo con tu cuerpo.');stage.append(pictureModel(r.color));let grid=el('div','grid');rules.forEach(a=>{let b=el('button','tile',a.label);b.style.fontSize='1rem';b.onclick=()=>{if(locked)return;if(a===r)complete('¡Muy bien! '+a.act);else{feedback.textContent='Miremos el color otra vez.';speak('Miremos el color otra vez')}};grid.append(b)});stage.append(grid)}function blaze(){let n=[3,4,6][diff()-1],items=['blaze','stripes','🚜','🚒','🚕','🚚'].slice(0,n),target=items[(round-1+n)%n];setup('🏎️ Misión Monster Machines','¡Vamos, Gian! Ayudá a Blaze a encontrar el vehículo igual.');stage.append(pictureModel(target));let grid=el('div','grid');shuffle(items).forEach(item=>{let b=el('button','tile');drawPicture(b,item);b.onclick=()=>{if(locked)return;if(item===target){b.classList.add('good');complete('¡A toda máquina! ¡Lo lograste!')}else{feedback.textContent='Mirá bien los vehículos y probá otra vez.';speak('Probá otra vez')}};grid.append(b)});stage.append(el('span','answers-label','Elegí el vehículo igual'),grid);}
+const banks=[characterBank,extraCharacters,['🚗','🚜','🚒','🚙','🚌','🚕','🚲','🚑','🚚'],['🐶','🐱','🐸','🐻','🐰','🐵','🐷','🦊','🐼'],['🍎','🍌','🍐','🍇','🍓','🍊','🍉','🍒','🍍'],['⭐','🌙','☀️','🌈','☁️','🌻','🌸','🍀','⚡']];const colors=['#e94d4d','#2782e5','#f7c638','#3dbb75'];let game='buscar',round=0,locked=false,score=Number(safeGet('gian_score')||0),attempts=Number(safeGet('gian_attempts')||0),sound=false;function safeGet(k){try{return localStorage.getItem(k)}catch(e){return null}}function safeSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}function speak(t){if(!sound||!('speechSynthesis'in window))return; speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang='es-AR';u.rate=.78;speechSynthesis.speak(u)}function el(tag,cl,txt){let x=document.createElement(tag);if(cl)x.className=cl;if(txt!==undefined)x.textContent=txt;return x}function msg(t,ok){feedback.textContent=t;if(ok){score++;safeSet('gian_score',score)}attempts++;safeSet('gian_attempts',attempts);$('score').textContent=`Misiones logradas: ${score} · Intentos: ${attempts}`;speak(t)}function complete(t,ok=true){locked=true;msg(t,ok);next.classList.remove('hidden')}function setup(title,instruction){locked=false;stage.replaceChildren();feedback.textContent='';next.classList.add('hidden');$('heading').textContent=title;$('instruction').textContent=instruction;$('score').textContent=`Misiones logradas: ${score} · Intentos: ${attempts}`;speak(instruction)}function diff(){return Number($('difficulty').value)}function shuffle(a){return [...a].sort(()=>Math.random()-.5)}function buscar(){let n=[4,6,9][diff()-1],bank=banks[round%banks.length],items=pictureBanks.includes(bank)?shuffle([...shuffle(bank).slice(0,n),...shuffle(pictureBanks.find(group=>group!==bank)).slice(0,Math.max(0,n-bank.length))]):shuffle(bank).slice(0,n),target=items[Math.floor(Math.random()*n)];setup('🔎 Encontrar','Buscá y tocá el dibujo que aparece arriba.');stage.append(pictureModel(target));let grid=el('div','grid');items.forEach(item=>{let b=el('button','tile');drawPicture(b,item);b.onclick=()=>{if(locked)return;if(item===target){b.classList.add('good');complete('¡Muy bien, Gian! ¡Lo encontraste!')}else{b.classList.add('bad');feedback.textContent='Probá otra vez. Mirá con calma.';speak('Probá otra vez');setTimeout(()=>b.classList.remove('bad'),650)}};grid.append(b)});stage.append(el('span','answers-label','Elegí la imagen igual'),grid)}function memoria(){let pairs=[2,3,4][diff()-1],items=shuffle(banks[(round-1+banks.length)%banks.length]).slice(0,pairs),cards=shuffle([...items,...items].map((v,i)=>({v,id:i}))),opened=[],found=0;setup('🧠 Memoria','Tocá dos tarjetas para encontrar dibujos iguales.');let grid=el('div','grid');cards.forEach(c=>{let b=el('button','tile','❓');b.setAttribute('aria-label','Tarjeta tapada');b.onclick=()=>{if(locked||b.dataset.found||opened.some(o=>o.b===b)||opened.length===2)return;drawPicture(b,c.v);opened.push({b,v:c.v});if(opened.length===2){let [a,d]=opened;if(a.v===d.v){a.b.classList.add('good');d.b.classList.add('good');a.b.dataset.found=d.b.dataset.found='yes';opened=[];found++;if(found===pairs)complete('¡Excelente! ¡Encontraste todas las parejas!')}else{locked=true;setTimeout(()=>{for(const {b} of [a,d]){b.textContent='❓';b.setAttribute('aria-label','Tarjeta tapada')}opened=[];if(stage.contains(a.b))locked=false},1000)}}};grid.append(b)});stage.append(grid)}let sequenceMode = 'colors';
+function secuencia() {
+  const count = [2, 3, 4][diff() - 1];
+  const useCharacters = sequenceMode === 'characters';
+  const options = (useCharacters ? shuffle(Object.keys(characters)) : colors).slice(0, count);
+  const pattern = options.map(() => Math.floor(Math.random() * count));
+  if (useCharacters && pattern.every(index => index === pattern[0])) {
+    pattern[count - 1] = (pattern[0] + 1) % count;
+  }
+  let position = 0;
+  setup('🎨 Secuencias', useCharacters
+    ? 'Mirá los personajes de arriba y tocalos en el mismo orden.'
+    : 'Mirá los colores de arriba y tocá los mismos en orden.');
+
+  const modes = el('div', 'settings');
+  for (const [value, label] of [['colors', 'Colores'], ['characters', 'Personajes']]) {
+    const selected = sequenceMode === value;
+    const button = el('button', selected ? 'action' : 'action secondary', label);
+    button.setAttribute('aria-pressed', String(selected));
+    button.onclick = () => {
+      if (sequenceMode === value) return;
+      sequenceMode = value;
+      secuencia();
+      stage.querySelector('[aria-pressed="true"]').focus();
+    };
+    modes.append(button);
+  }
+  stage.append(modes);
+
+  const model = el('div', 'sequence sequence-model');
+  const steps = pattern.map(index => {
+    const step = el('div', useCharacters ? 'sequence-character' : 'dot');
+    if (useCharacters) {
+      drawPicture(step, options[index]);
+    } else {
+      step.style.background = options[index];
+    }
+    model.append(step);
+    return step;
+  });
+  stage.append(modelCard(model, 'Mirá el orden'));
+  const row = el('div', 'sequence sequence-options');
+  options.forEach((item, index) => {
+    const button = el('button', useCharacters ? 'choice sequence-character' : 'choice', useCharacters ? undefined : '●');
+    if (useCharacters) {
+      drawPicture(button, item);
+    } else {
+      button.style.color = item;
+      button.setAttribute('aria-label', 'Color ' + ['rojo', 'azul', 'amarillo', 'verde'][index]);
+    }
+    button.onclick = () => {
+      if (locked) return;
+      if (index === pattern[position]) {
+        steps[position].classList.add('sequence-done');
+        position++;
+        feedback.textContent = `¡Bien! ${position} de ${count}`;
+        if (position === count) complete('¡Genial! ¡Completaste la secuencia!');
+      } else {
+        position = 0;
+        steps.forEach(step => step.classList.remove('sequence-done'));
+        feedback.textContent = 'Probemos de nuevo desde el principio.';
+        speak('Probemos de nuevo');
+      }
+    };
+    row.append(button);
+  });
+  stage.append(row);
+}
+function semaforo(){let n=[2,3,4][diff()-1],rules=[{color:'🟢',label:'SEGUIR',act:'Caminar en el lugar'},{color:'🔴',label:'PARAR',act:'Quedarse quieto'},{color:'🟡',label:'DESPACIO',act:'Moverse despacio'},{color:'🔵',label:'APLAUDIR',act:'Aplaudir'}].slice(0,n),r=rules[Math.floor(Math.random()*n)];setup('🚦 Semáforo','Mirá el semáforo. Elegí qué hay que hacer. También podés hacerlo con tu cuerpo.');stage.append(pictureModel(r.color));let grid=el('div','grid');rules.forEach(a=>{let b=el('button','tile',a.label);b.style.fontSize='1rem';b.onclick=()=>{if(locked)return;if(a===r)complete('¡Muy bien! '+a.act);else{feedback.textContent='Miremos el color otra vez.';speak('Miremos el color otra vez')}};grid.append(b)});stage.append(grid)}function blaze(){let n=[3,4,6][diff()-1],items=['blaze','stripes','🚜','🚒','🚕','🚚'].slice(0,n),target=items[(round-1+n)%n];setup('🏎️ Misión Monster Machines','¡Vamos, Gian! Ayudá a Blaze a encontrar el vehículo igual.');stage.append(pictureModel(target));let grid=el('div','grid');shuffle(items).forEach(item=>{let b=el('button','tile');drawPicture(b,item);b.onclick=()=>{if(locked)return;if(item===target){b.classList.add('good');complete('¡A toda máquina! ¡Lo lograste!')}else{feedback.textContent='Mirá bien los vehículos y probá otra vez.';speak('Probá otra vez')}};grid.append(b)});stage.append(el('span','answers-label','Elegí el vehículo igual'),grid);}
 const syllables=['MA','PA','LA','SA','TA','CA','GA','NA','RA','VA'];const words=[['CAMA','🛏️'],['PALA','🛠️'],['GATA','🐱'],['VACA','🐄'],['CASA','🏠'],['PATA','🦆'],['RANA','🐸'],['MASA','🍞'],['TAPA','🫙'],['PAVA','🫖'],['CACA','💩'],['GANA','🏆']];
 function silabas(){let syl=syllables[(round*3+1)%syllables.length],choices=shuffle([syl,...shuffle(syllables.filter(x=>x!==syl)).slice(0,[1,2,3][diff()-1])]);setup('🔤 Sílabas SELEC','Escuchá la sílaba y tocá la que corresponde. También podés leerla en voz alta.');let upper=el('div','settings');let toggle=el('button','action secondary','Aa / aa');toggle.style.margin='0';let lower=false;let play=el('button','action','🔊 Escuchar sílaba');function say(){if(!('speechSynthesis'in window)){feedback.textContent='La voz no está disponible en este navegador.';return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(syl.toLowerCase());u.lang='es-AR';u.rate=.65;u.pitch=1;speechSynthesis.speak(u)}play.onclick=say;upper.append(toggle);stage.append(modelCard(play,'Escuchá primero'),upper);let grid=el('div','grid');choices.forEach(item=>{let b=el('button','tile',item);b.style.fontSize='2rem';b.onclick=()=>{if(locked)return;if(item===syl){b.classList.add('good');complete('¡Muy bien! '+syl)}else{feedback.textContent='Escuchá otra vez y volvé a probar.'}};grid.append(b)});toggle.onclick=()=>{lower=!lower;Array.from(grid.children).forEach((b,i)=>b.textContent=lower?choices[i].toLowerCase():choices[i])};stage.append(grid);let w=words[round%words.length];let extra=el('p','muted','Palabra para practicar después: '+w[0]+' '+w[1]);stage.append(extra)}
 function render(){({buscar,memoria,secuencia,semaforo,blaze,silabas})[game]();document.querySelectorAll('[data-game]').forEach(b=>{b.classList.toggle('active',b.dataset.game===game);b.setAttribute('aria-pressed',String(b.dataset.game===game))})}document.querySelectorAll('[data-game]').forEach(b=>b.onclick=()=>{game=b.dataset.game;round++;render()});$('difficulty').onchange=()=>{round++;render()};next.onclick=()=>{round++;render()};$('sound').onclick=()=>{sound=!sound;$('sound').textContent=sound?'🔊 Voz activada':'🔇 Voz desactivada';if(sound)speak($('instruction').textContent)};render()})();
